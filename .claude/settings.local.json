@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "PowerShell(npm run dev)",
+      "PowerShell($env:PATH)",
+      "PowerShell(Get-ChildItem \"C:\\\\Program Files\\\\nodejs\" | Select-Object Name; [Environment]::GetEnvironmentVariable\\(\"PATH\", \"Machine\"\\) -split \";\" | Select-String \"node\")",
+      "Bash(\"/c/Program Files/nodejs/npm\" run dev)",
+      "Bash(echo \"PID: $!\")",
+      "Bash(jobs -l)",
+      "Bash(git clone *)",
+      "Bash(cp -r \"/c/Users/PC/Desktop/fairspace2/.\" \"/c/Users/PC/Desktop/fairspace/\")",
+      "Bash(rm -rf \"/c/Users/PC/Desktop/fairspace2\")",
+      "Bash(\"/c/Program Files/nodejs/npm\" install)",
+      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;\" + $env:PATH; Set-Location \"C:\\\\Users\\\\PC\\\\Desktop\\\\fairspace\"; & \"C:\\\\Program Files\\\\nodejs\\\\npm.cmd\" install 2>&1)",
+      "PowerShell([Environment]::GetEnvironmentVariable\\(\"PATH\", \"Machine\"\\) -split \";\" | Select-String \"node\")",
+      "PowerShell($env:PATH = [Environment]::GetEnvironmentVariable\\(\"PATH\", \"Machine\"\\) + \";\" + [Environment]::GetEnvironmentVariable\\(\"PATH\", \"User\"\\); Set-Location \"C:\\\\Users\\\\PC\\\\Desktop\\\\fairspace\"; npm run dev)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git config *)"
+    ]
+  }
+}
