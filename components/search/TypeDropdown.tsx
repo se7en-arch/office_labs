@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useRef, useState } from 'react';
 import { PROP_TYPES } from '@/lib/data';
@@ -6,8 +6,12 @@ import { HomeIcon } from '@/components/icons';
 import MobileSheet from './MobileSheet';
 import { useIsMobile } from '@/hooks/useIsMobile';
 
-export default function TypeDropdown() {
-  const [value, setValue] = useState('');
+interface Props {
+  value: string;
+  onChange: (type: string) => void;
+}
+
+export default function TypeDropdown({ value, onChange }: Props) {
   const [open, setOpen] = useState(false);
   const [highlighted, setHighlighted] = useState(-1);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -17,8 +21,8 @@ export default function TypeDropdown() {
     function handleOutside(e: MouseEvent) {
       if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
     }
-    document.addEventListener('click', handleOutside);
-    return () => document.removeEventListener('click', handleOutside);
+    document.addEventListener('pointerdown', handleOutside);
+    return () => document.removeEventListener('pointerdown', handleOutside);
   }, []);
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -30,7 +34,7 @@ export default function TypeDropdown() {
   }
 
   function select(type: string) {
-    setValue(type);
+    onChange(type);
     setOpen(false);
   }
 
@@ -75,3 +79,4 @@ export default function TypeDropdown() {
     </div>
   );
 }
+

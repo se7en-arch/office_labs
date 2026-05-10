@@ -7,12 +7,14 @@ export interface StoredUser {
   email: string;
   passwordHash: string;
   createdAt: number;
+  avatar?: string;
 }
 
 export interface Session {
   userId: string;
   name: string;
   email: string;
+  avatar?: string;
 }
 
 export type AuthResult =
@@ -39,6 +41,20 @@ function getUsers(): StoredUser[] {
 export function getSession(): Session | null {
   if (typeof window === 'undefined') return null;
   try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch { return null; }
+}
+
+export function updateAvatar(userId: string, base64: string): void {
+  if (typeof window === 'undefined') return;
+  const users = getUsers();
+  const idx = users.findIndex(u => u.id === userId);
+  if (idx === -1) return;
+  users[idx].avatar = base64;
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  const session = getSession();
+  if (session) {
+    session.avatar = base64;
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  }
 }
 
 export function register(name: string, email: string, password: string, confirm: string): AuthResult {
@@ -69,7 +85,7 @@ export function register(name: string, email: string, password: string, confirm:
   };
 
   localStorage.setItem(USERS_KEY, JSON.stringify([...users, user]));
-  const session: Session = { userId: user.id, name: user.name, email: user.email };
+  const session: Session = { userId: user.id, name: user.name, email: user.email, avatar: user.avatar };
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
   return { ok: true, session };
 }
@@ -90,7 +106,7 @@ export function login(email: string, password: string): AuthResult {
   if (user.passwordHash !== hashPassword(password))
     return { ok: false, field: 'password', message: 'Грешна парола. Опитай отново.' };
 
-  const session: Session = { userId: user.id, name: user.name, email: user.email };
+  const session: Session = { userId: user.id, name: user.name, email: user.email, avatar: user.avatar };
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
   return { ok: true, session };
 }

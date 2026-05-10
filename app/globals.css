@@ -19,6 +19,14 @@ body {
   background: var(--bg);
   color: var(--text);
   line-height: 1.5;
+  /* iOS click-propagation fix — makes document receive click from any tap */
+  cursor: pointer;
+}
+
+/* Remove 300ms tap delay and iOS tap highlight on all interactive elements */
+* { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+a, button, input, select, textarea, label, [role="button"] {
+  touch-action: manipulation;
 }
 
 a { text-decoration: none; color: inherit; }
@@ -81,19 +89,89 @@ button { font-family: inherit; cursor: pointer; }
 .price-dd__apply:hover { background: var(--brand-d); }
 
 /* Nav actions */
-.nav-act { display: flex; align-items: center; gap: 6px; flex-shrink: 0; position: relative; }
-.btn-host { padding: 4px 8px; background: none; border: none; font-size: 14px; font-weight: 500; color: #111; white-space: nowrap; cursor: pointer; font-family: inherit; text-decoration: none; border-radius: 8px; transition: background .15s, color .15s; }
-.btn-host:hover { background: #f0f0f0; color: #111; }
-.menu-pill { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: none; background: transparent; cursor: pointer; position: relative; flex-shrink: 0; padding: 0; }
+.nav-act { display: flex; align-items: center; gap: 8px; flex-shrink: 0; position: relative; }
+
+/* "Публикувай +" pill button */
+.btn-publish-pill {
+  display: flex; align-items: center; gap: 5px;
+  padding: 8px 16px;
+  background: #f0f0f0;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 100px;
+  font-size: 14px; font-weight: 600; color: #111;
+  white-space: nowrap; cursor: pointer;
+  font-family: inherit; text-decoration: none;
+  transition: background .15s, border-color .15s;
+}
+.btn-publish-pill:hover { background: #e6e6e6; border-color: #d0d0d0; }
+.btn-publish-plus { font-size: 17px; font-weight: 400; line-height: 1; color: #555; }
+
+/* Burger / avatar button */
+.menu-pill { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: none; background: transparent; cursor: pointer; position: relative; flex-shrink: 0; padding: 0; border-radius: 50%; }
+.menu-pill--avatar { background: transparent; }
 .pill-lines { display: flex; flex-direction: column; gap: 5px; }
 .pill-lines span { display: block; width: 20px; height: 2px; border-radius: 1px; background: #111; }
-.dropdown { position: absolute; top: calc(100% + 10px); right: 0; background: #fff; border-radius: 14px; box-shadow: 0 4px 24px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05); min-width: 220px; padding: 8px 0; opacity: 0; visibility: hidden; transform: translateY(-6px); transition: opacity .15s, transform .15s, visibility .15s; z-index: 100; }
+
+/* Avatar — box-shadow ring technique */
+.nav-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  background: #FFA627;
+  box-shadow: 0 0 0 2.5px #fff, 0 0 0 4.5px #FFA627;
+}
+.nav-avatar__img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.nav-avatar__initials {
+  color: #fff; font-size: 11px; font-weight: 700; line-height: 1;
+}
+
+/* Avatar image in dropdown header */
+.dd-profile-avatar--img {
+  width: 36px; height: 36px; border-radius: 50%;
+  object-fit: cover; display: block;
+}
+
+/* Dropdown */
+.dropdown { position: absolute; top: calc(100% + 10px); right: 0; background: #fff; border-radius: 18px; box-shadow: 0 8px 32px rgba(0,0,0,0.13), 0 0 0 1px rgba(0,0,0,0.06); min-width: 240px; padding: 8px; opacity: 0; visibility: hidden; transform: translateY(-6px); transition: opacity .15s, transform .15s, visibility .15s; z-index: 100; }
 .dropdown.open { opacity: 1; visibility: visible; transform: translateY(0); }
-.dropdown a { display: block; padding: 11px 16px; font-size: 14px; color: var(--text); transition: background .1s; }
-.dropdown a:hover { background: #f5f5f5; }
-.dropdown a.fw { font-weight: 600; }
+
+/* Profile header in dropdown */
+.dd-profile-head { display: flex; align-items: center; gap: 10px; padding: 10px 12px 12px; margin-bottom: 4px; }
+.dd-profile-avatar { width: 36px; height: 36px; border-radius: 50%; background: #FFA627; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+.dd-profile-name { font-size: 13px; font-weight: 700; color: #111827; }
+.dd-profile-email { font-size: 11.5px; color: #9ca3af; margin-top: 1px; }
+
+/* Dropdown items with icons */
+.dd-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 10px 12px; font-size: 14px; color: #111;
+  border-radius: 10px; cursor: pointer;
+  transition: background .1s; text-decoration: none;
+  width: 100%; text-align: left; background: none; border: none;
+  font-family: inherit;
+}
+.dd-item:hover { background: #f5f5f5; }
+.dd-item--bold { font-weight: 600; }
+.dd-item__icon { display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; color: #555; flex-shrink: 0; }
+.dd-item--logout { color: #ef4444; }
+.dd-item--logout .dd-item__icon { color: #ef4444; }
+
+/* PRO badge */
+.dd-pro-badge {
+  margin-left: auto;
+  background: #a855f7;
+  color: #fff;
+  font-size: 10px; font-weight: 700;
+  padding: 2px 7px; border-radius: 100px;
+  letter-spacing: 0.3px;
+}
+
+/* Separator */
+.dd-sep { border: none; border-top: 1px solid #f0f0f0; margin: 6px 0; }
 .dd-host { display: none; }
-.dropdown hr { border: none; border-top: 1px solid #ebebeb; margin: 6px 0; }
 
 /* Mobile search row */
 .srch-mob { display: none; padding: 10px 16px; background: var(--white); border-bottom: 1px solid var(--line); }
@@ -104,8 +182,8 @@ button { font-family: inherit; cursor: pointer; }
 .main { max-width: 1534px; margin: 0 auto; padding: 40px 40px 64px; }
 
 .city { margin-bottom: 52px; display: flex; flex-direction: column; align-items: center; }
-.city__hd { display: flex; align-items: center; gap: 4px; margin-bottom: 20px; cursor: pointer; width: 1454px; max-width: 100%; }
-.city__hd h2 { font-size: 18px; font-weight: 700; font-family: var(--font-inter), 'Inter', sans-serif; color: #222222; }
+.city__hd { display: flex; align-items: center; gap: 4px; margin-bottom: 20px; cursor: default; user-select: none; width: 1454px; max-width: 100%; }
+.city__hd h2 { font-size: 18px; font-weight: 700; font-family: var(--font-inter), 'Inter', sans-serif; color: #222222; cursor: default; }
 .city__arr { color: var(--muted); display: flex; transition: transform .2s, color .2s; }
 .city__hd:hover .city__arr { transform: translateX(4px); color: var(--brand); }
 
@@ -165,6 +243,7 @@ footer { background: var(--white); padding: 52px 20px 28px; }
 }
 @media (max-width: 1000px) {
   .btn-host { display: none; }
+  .btn-publish-pill { display: none; }
   .dd-host { display: block; }
 }
 @media (max-width: 600px) {

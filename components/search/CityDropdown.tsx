@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useRef, useState } from 'react';
 import { BG_CITIES, BG_CITIES_TOP } from '@/lib/data';
@@ -6,8 +6,12 @@ import { PinIcon } from '@/components/icons';
 import MobileSheet from './MobileSheet';
 import { useIsMobile } from '@/hooks/useIsMobile';
 
-export default function CityDropdown() {
-  const [value, setValue] = useState('');
+interface Props {
+  value: string;
+  onChange: (city: string) => void;
+}
+
+export default function CityDropdown({ value, onChange }: Props) {
   const [open, setOpen] = useState(false);
   const [highlighted, setHighlighted] = useState(-1);
   const [mq, setMq] = useState('');
@@ -18,8 +22,8 @@ export default function CityDropdown() {
     function handleOutside(e: MouseEvent) {
       if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
     }
-    document.addEventListener('click', handleOutside);
-    return () => document.removeEventListener('click', handleOutside);
+    document.addEventListener('pointerdown', handleOutside);
+    return () => document.removeEventListener('pointerdown', handleOutside);
   }, []);
 
   const q = value.trim().toLowerCase();
@@ -39,7 +43,7 @@ export default function CityDropdown() {
   }
 
   function select(city: string) {
-    setValue(city);
+    onChange(city);
     setOpen(false);
     setMq('');
   }
@@ -53,7 +57,7 @@ export default function CityDropdown() {
           autoComplete="off"
           value={value}
           readOnly={isMobile}
-          onChange={e => { if (!isMobile) { setValue(e.target.value); setOpen(true); setHighlighted(-1); } }}
+          onChange={e => { if (!isMobile) { onChange(e.target.value); setOpen(true); setHighlighted(-1); } }}
           onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
         />
@@ -97,3 +101,4 @@ export default function CityDropdown() {
     </div>
   );
 }
+

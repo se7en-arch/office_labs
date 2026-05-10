@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { getSession, logout, getInitials, type Session } from '@/lib/auth';
+import { getSession, logout, getInitials, updateAvatar, type Session } from '@/lib/auth';
 import s from './ProfilePage.module.css';
 
 const MY_LISTINGS = [
@@ -78,13 +78,44 @@ export default function ProfilePage() {
   const [tab,     setTab]     = useState<Tab>('listings');
   const [session, setSession] = useState<Session | null>(null);
   const [ready,   setReady]   = useState(false);
+  const [avatar,  setAvatar]  = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const s = getSession();
     if (!s) { router.replace('/login'); return; }
     setSession(s);
+    setAvatar(s.avatar || null);
     setReady(true);
   }, [router]);
+
+  function handleAvatarClick() {
+    fileInputRef.current?.click();
+  }
+
+  function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !session) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new window.Image();
+      img.onload = () => {
+        const SIZE = 200;
+        const canvas = document.createElement('canvas');
+        const ratio = Math.min(SIZE / img.width, SIZE / img.height);
+        canvas.width  = Math.round(img.width  * ratio);
+        canvas.height = Math.round(img.height * ratio);
+        canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const base64 = canvas.toDataURL('image/jpeg', 0.82);
+        updateAvatar(session.userId, base64);
+        setAvatar(base64);
+        setSession(prev => prev ? { ...prev, avatar: base64 } : prev);
+      };
+      img.src = ev.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  }
 
   function handleLogout() {
     logout();
@@ -113,12 +144,31 @@ export default function ProfilePage() {
       <aside className={s.aside}>
         <div className={s.userCard}>
           <div className={s.avatarWrap}>
-            <div className={s.avatar}>{initials}</div>
+            <button className={s.avatarBtn} onClick={handleAvatarClick} title="Смени снимката">
+              {avatar ? (
+                <img src={avatar} alt="Профилна снимка" className={s.avatarImg} />
+              ) : (
+                <div className={s.avatar}>{initials}</div>
+              )}
+              <span className={s.avatarOverlay}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                  <circle cx="12" cy="13" r="4"/>
+                </svg>
+              </span>
+            </button>
             <span className={s.verifiedDot} title="Верифициран акаунт">
               <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </span>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handleAvatarChange}
+            />
           </div>
           <div className={s.userName}>{session!.name}</div>
           <span className={s.roleBadge}>Собственик</span>

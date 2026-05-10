@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { CITIES, PROP_TYPES, BG_CITIES } from '@/lib/data';
@@ -52,8 +53,18 @@ const EMPTY_FILTERS: Filters = {
 };
 
 export default function SearchPage() {
-  const [draft, setDraft]         = useState<Filters>(EMPTY_FILTERS);
-  const [active, setActive]       = useState<Filters>(EMPTY_FILTERS);
+  const searchParams = useSearchParams();
+
+  const initialFilters = useMemo<Filters>(() => ({
+    ...EMPTY_FILTERS,
+    location:      searchParams.get('location') || '',
+    propertyTypes: searchParams.get('type') ? [searchParams.get('type')!] : [],
+    priceMin:      searchParams.get('priceMin') || '',
+    priceMax:      searchParams.get('priceMax') || '',
+  }), []);
+
+  const [draft, setDraft]         = useState<Filters>(initialFilters);
+  const [active, setActive]       = useState<Filters>(initialFilters);
   const [sort, setSort]           = useState('default');
   const [page, setPage]           = useState(1);
   const [mobileOpen, setMobile]   = useState(false);

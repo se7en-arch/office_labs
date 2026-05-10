@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import Header from '@/components/Header';
 import SearchPage from '@/components/search/SearchPage';
@@ -12,7 +13,9 @@ export default function SearchRoute() {
   return (
     <>
       <Header />
-      <SearchPage />
+      <Suspense fallback={null}>
+        <SearchPage />
+      </Suspense>
       <FeaturesSection />
       <Footer />
     </>

@@ -11,7 +11,7 @@ const STATS = [
 ];
 
 export default function HeroSection() {
-  const [deal, setDeal] = useState<'rent' | 'buy'>('rent');
+  const [deal, setDeal] = useState<'rent' | 'buy' | 'developer'>('rent');
   const uid = useId().replace(/:/g, '');
 
   return (
@@ -89,6 +89,12 @@ export default function HeroSection() {
             onClick={() => setDeal('buy')}
           >
             Продажба
+          </button>
+          <button
+            className={`${s.dealTab}${deal === 'developer' ? ` ${s.dealTabActive}` : ''}`}
+            onClick={() => setDeal('developer')}
+          >
+            От инвеститор
           </button>
         </div>
 

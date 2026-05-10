@@ -1,9 +1,13 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSession, logout, getInitials, type Session } from '@/lib/auth';
+import {
+  UserIcon, UserPlusIcon, LoginIcon, LogoutIcon,
+  InfoCircleIcon, CrownIcon, PlusCircleIcon,
+} from '@/components/icons';
 
 export default function NavMenu() {
   const router       = useRouter();
@@ -12,9 +16,7 @@ export default function NavMenu() {
   const containerRef = useRef<HTMLDivElement>(null);
   const btnRef       = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
-    setSession(getSession());
-  }, []);
+  useEffect(() => { setSession(getSession()); }, []);
 
   useEffect(() => {
     function handleOutsideClick(e: MouseEvent) {
@@ -23,10 +25,10 @@ export default function NavMenu() {
     function handleKeydown(e: KeyboardEvent) {
       if (e.key === 'Escape') { setOpen(false); btnRef.current?.focus(); }
     }
-    document.addEventListener('click', handleOutsideClick);
+    document.addEventListener('pointerdown', handleOutsideClick);
     document.addEventListener('keydown', handleKeydown);
     return () => {
-      document.removeEventListener('click', handleOutsideClick);
+      document.removeEventListener('pointerdown', handleOutsideClick);
       document.removeEventListener('keydown', handleKeydown);
     };
   }, []);
@@ -43,18 +45,28 @@ export default function NavMenu() {
 
   return (
     <div className="nav-act" ref={containerRef}>
-      <Link href="/publish" className="btn-host">Публикувай имот</Link>
+
+      {/* ── "Публикувай +" pill button ── */}
+      <Link href="/publish" className="btn-publish-pill">
+        Публикувай <span className="btn-publish-plus">+</span>
+      </Link>
+
+      {/* ── Avatar / burger button ── */}
       <button
         ref={btnRef}
-        className="menu-pill"
+        className={`menu-pill${session ? ' menu-pill--avatar' : ''}`}
         aria-label="Меню"
         aria-expanded={open}
         aria-haspopup="true"
         onClick={e => { e.stopPropagation(); setOpen(prev => !prev); }}
       >
         {session ? (
-          <span style={{ width: 28, height: 28, borderRadius: '50%', background: '#FFA627', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>
-            {initials}
+          <span className="nav-avatar">
+            {session.avatar ? (
+              <img src={session.avatar} alt="" className="nav-avatar__img" />
+            ) : (
+              <span className="nav-avatar__initials">{initials}</span>
+            )}
           </span>
         ) : (
           <div className="pill-lines">
@@ -62,35 +74,74 @@ export default function NavMenu() {
           </div>
         )}
       </button>
+
+      {/* ── Dropdown ── */}
       <div className={`dropdown${open ? ' open' : ''}`} role="menu">
         {session ? (
           <>
-            <div style={{ padding: '10px 16px 8px', borderBottom: '1px solid #f0f1f3', marginBottom: 4 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>{session.name}</div>
-              <div style={{ fontSize: 11.5, color: '#9ca3af', marginTop: 2 }}>{session.email}</div>
+            {/* Profile header */}
+            <div className="dd-profile-head">
+              {session.avatar ? (
+                <img src={session.avatar} alt="" className="dd-profile-avatar dd-profile-avatar--img" />
+              ) : (
+                <span className="dd-profile-avatar">{initials}</span>
+              )}
+              <div>
+                <div className="dd-profile-name">{session.name}</div>
+                <div className="dd-profile-email">{session.email}</div>
+              </div>
             </div>
-            <Link href="/profile" role="menuitem" onClick={() => setOpen(false)}>Моят профил</Link>
-            <Link href="/publish" role="menuitem" onClick={() => setOpen(false)}>Публикувай обява</Link>
-            <hr />
-            <Link href="#" role="menuitem">Помощен център</Link>
-            <button
-              role="menuitem"
-              onClick={handleLogout}
-              style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: '10px 16px', fontSize: 14, color: '#ef4444', fontFamily: 'inherit' }}
-            >
+
+            <Link href="/profile" className="dd-item" role="menuitem" onClick={() => setOpen(false)}>
+              <span className="dd-item__icon"><UserIcon /></span>
+              Моят профил
+            </Link>
+            <Link href="/publish" className="dd-item" role="menuitem" onClick={() => setOpen(false)}>
+              <span className="dd-item__icon"><PlusCircleIcon /></span>
+              Публикувай обява
+            </Link>
+            <Link href="/pro" className="dd-item" role="menuitem" onClick={() => setOpen(false)}>
+              <span className="dd-item__icon"><CrownIcon /></span>
+              Про план
+              <span className="dd-pro-badge">⚡ PRO</span>
+            </Link>
+
+            <hr className="dd-sep" />
+
+            <Link href="#" className="dd-item" role="menuitem">
+              <span className="dd-item__icon"><InfoCircleIcon /></span>
+              Помощен център
+            </Link>
+            <button className="dd-item dd-item--logout" role="menuitem" onClick={handleLogout}>
+              <span className="dd-item__icon"><LogoutIcon /></span>
               Изход
             </button>
           </>
         ) : (
           <>
-            <Link href="/register" className="fw" role="menuitem" onClick={() => setOpen(false)}>Регистрация</Link>
-            <Link href="/login" role="menuitem" onClick={() => setOpen(false)}>Вход</Link>
-            <hr />
-            <Link href="/publish" className="dd-host" role="menuitem" onClick={() => setOpen(false)}>Публикувай имот</Link>
-            <Link href="#" role="menuitem">Помощен център</Link>
+            <Link href="/register" className="dd-item dd-item--bold" role="menuitem" onClick={() => setOpen(false)}>
+              <span className="dd-item__icon"><UserPlusIcon /></span>
+              Регистрация
+            </Link>
+            <Link href="/login" className="dd-item" role="menuitem" onClick={() => setOpen(false)}>
+              <span className="dd-item__icon"><LoginIcon /></span>
+              Вход
+            </Link>
+
+            <hr className="dd-sep" />
+
+            <Link href="/publish" className="dd-item" role="menuitem" onClick={() => setOpen(false)}>
+              <span className="dd-item__icon"><PlusCircleIcon /></span>
+              Публикувай имот
+            </Link>
+            <Link href="#" className="dd-item" role="menuitem">
+              <span className="dd-item__icon"><InfoCircleIcon /></span>
+              Помощен център
+            </Link>
           </>
         )}
       </div>
     </div>
   );
 }
+
