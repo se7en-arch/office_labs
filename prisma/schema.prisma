@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Series {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  slug        String    @unique
+  tagline     String
+  description String
+  color       String
+  products    Product[]
+}
+
+model Category {
+  id       Int       @id @default(autoincrement())
+  name     String    @unique
+  slug     String    @unique
+  products Product[]
+}
+
+model Product {
+  id            Int      @id @default(autoincrement())
+  name          String
+  slug          String   @unique
+  sku           String?  @unique
+  price         Float
+  originalPrice Float?
+  description   String
+  image         String
+  badge         String?
+  featured      Boolean  @default(false)
+  stock         Int      @default(10)
+  seriesId      Int
+  categoryId    Int
+  series        Series   @relation(fields: [seriesId], references: [id])
+  category      Category @relation(fields: [categoryId], references: [id])
+  createdAt     DateTime @default(now())
+}
