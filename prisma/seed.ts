@@ -1,9 +1,9 @@
 ﻿import { PrismaClient } from '../lib/generated/prisma/client';
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
-import path from 'path';
+import { PrismaLibSql } from '@prisma/adapter-libsql';
 
-const adapter = new PrismaBetterSqlite3({ url: path.join(process.cwd(), 'dev.db') });
-const prisma = new PrismaClient({ adapter });
+const url = process.env.DATABASE_URL ?? 'file:dev.db';
+const authToken = process.env.TURSO_AUTH_TOKEN;
+const prisma = new PrismaClient({ adapter: new PrismaLibSql({ url, ...(authToken ? { authToken } : {}) }) });
 
 async function main() {
   // Clean existing data
