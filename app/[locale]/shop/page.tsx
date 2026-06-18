@@ -1,7 +1,19 @@
+import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { Link } from '@/i18n/navigation';
 import { getTranslations } from 'next-intl/server';
 import { prisma } from '@/lib/prisma';
+
+export const metadata: Metadata = {
+  title: 'Магазин | .office labs — Премиум офис мебели',
+  description: 'Разгледай всички серии офис мебели — NOVA, ASTRA, TERRA, LOFT. Бюра, маси, шкафове, етажерки. Безплатна доставка.',
+  openGraph: {
+    title: 'Магазин | .office labs',
+    description: 'Разгледай всички серии офис мебели — NOVA, ASTRA, TERRA, LOFT.',
+    type: 'website',
+    siteName: '.office labs',
+  },
+};
 import ProductCard from '@/components/ProductCard';
 import ShopSidebar from '@/components/ShopSidebar';
 import SortSelect from '@/components/SortSelect';
@@ -29,10 +41,10 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
   const [allSeries, allCategories, totalCount] = await Promise.all([
     prisma.series.findMany({ orderBy: { id: 'asc' } }),
     prisma.category.findMany({ orderBy: { id: 'asc' } }),
-    prisma.product.count(),
+    prisma.product.count({ where: { archived: false } }),
   ]);
 
-  const where: Record<string, unknown> = {};
+  const where: Record<string, unknown> = { archived: false };
   if (sp.series) where.series = { slug: sp.series };
   if (sp.category) where.category = { slug: sp.category };
   if (sp.min || sp.max) {
@@ -83,7 +95,7 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
   }
 
   const recommended = await prisma.product.findMany({
-    where: { featured: true },
+    where: { featured: true, archived: false },
     take: 4,
     include: {
       series: { select: { name: true, slug: true } },
@@ -155,6 +167,7 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
                       seriesName={p.series.name}
                       categoryName={p.category.name}
                       description={p.description}
+                      stock={p.stock}
                     />
                   ))}
                 </div>
@@ -218,6 +231,7 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
                   seriesName={p.series.name}
                   categoryName={p.category.name}
                   description={p.description}
+                  stock={p.stock}
                 />
               ))}
             </div>

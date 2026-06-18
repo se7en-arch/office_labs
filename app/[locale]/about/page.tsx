@@ -120,7 +120,7 @@ export default async function AboutPage() {
           </div>
           <div className="about-series-grid">
             {seriesList.map((s) => (
-              <Link key={s.slug} href={`/shop?series=${s.slug}`} className="about-series-card">
+              <Link key={s.slug} href={`/gallery/${s.slug}`} className="about-series-card">
                 <Image
                   src={s.image}
                   alt={s.name}

@@ -114,6 +114,7 @@
     "added": "✓ Added!",
     "inStock": "In stock",
     "outOfStock": "Out of stock",
+    "limitedStock": "Limited availability",
     "stockCount": "{count} in stock",
     "specs": "Specifications",
     "sku": "SKU",

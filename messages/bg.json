@@ -114,6 +114,7 @@
     "added": "✓ Добавено!",
     "inStock": "В наличност",
     "outOfStock": "Изчерпано",
+    "limitedStock": "Ограничена наличност",
     "stockCount": "{count} бр. в наличност",
     "specs": "Спецификации",
     "sku": "SKU",

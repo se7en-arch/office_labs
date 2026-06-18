@@ -40,35 +40,104 @@ export default function CheckoutPage() {
   const [postcode, setPostcode]     = useState('');
 
   const [payment, setPayment]       = useState<'card' | 'cod'>('card');
-  const [errors, setErrors]         = useState<Record<string, string>>({});
+  const [errors, setErrors]   = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Set<string>>(new Set());
+
+  // ── Regex patterns ──────────────────────────────────────────
+  const RX = {
+    name:     /^[А-ЯA-Zа-яa-zÀ-ÿ][А-ЯA-Zа-яa-zÀ-ÿ\s\-']{1,49}$/u,
+    phone:    /^(\+359|0)([ \-]?\d){8,10}$/,
+    email:    /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/,
+    eik:      /^\d{9}(\d{4})?$/,
+    vat:      /^BG\d{9,10}$/i,
+    postcode: /^[1-9]\d{3}$/,
+    city:     /^[А-ЯA-Zа-яa-zÀ-ÿ][А-ЯA-Zа-яa-zÀ-ÿ0-9\s\-\.]{1,79}$/u,
+    address:  /^.{5,200}$/,
+    company:  /^.{2,100}$/,
+    mol:      /^[А-ЯA-Zа-яa-zÀ-ÿ\s\-]{5,100}$/u,
+  };
+
+  const MSGS: Record<string, string> = {
+    firstName_invalid: 'Само букви, минимум 2 символа',
+    lastName_invalid:  'Само букви, минимум 2 символа',
+    phone_invalid:     'Формат: +359 88 888 8888 или 088 888 8888',
+    email_invalid:     'Невалиден имейл адрес (напр. ivan@mail.bg)',
+    eik_invalid:       'ЕИК трябва да е 9 или 13 цифри',
+    vat_invalid:       'Формат: BG123456789 (BG + 9 или 10 цифри)',
+    postcode_invalid:  'Пощенски код: 4 цифри (напр. 1000)',
+    city_invalid:      'Невалидно населено място',
+    address_invalid:   'Адресът трябва да е поне 5 символа',
+    company_invalid:   'Минимум 2 символа',
+    mol_invalid:       'Въведете поне две имена (само букви)',
+  };
+
+  function fieldError(name: string, value: string): string {
+    const req = t('required');
+    const v = value.trim();
+    if (!v) return req;
+    switch (name) {
+      case 'firstName': return RX.name.test(v)     ? '' : MSGS.firstName_invalid;
+      case 'lastName':  return RX.name.test(v)     ? '' : MSGS.lastName_invalid;
+      case 'phone':     return RX.phone.test(v)    ? '' : MSGS.phone_invalid;
+      case 'email':     return RX.email.test(v)    ? '' : MSGS.email_invalid;
+      case 'company':   return RX.company.test(v)  ? '' : MSGS.company_invalid;
+      case 'eik':       return RX.eik.test(v)      ? '' : MSGS.eik_invalid;
+      case 'vat':       return RX.vat.test(v)      ? '' : MSGS.vat_invalid;
+      case 'mol':       return RX.mol.test(v)      ? '' : MSGS.mol_invalid;
+      case 'city':      return RX.city.test(v)     ? '' : MSGS.city_invalid;
+      case 'postcode':  return RX.postcode.test(v) ? '' : MSGS.postcode_invalid;
+      case 'address':   return RX.address.test(v)  ? '' : MSGS.address_invalid;
+      default: return '';
+    }
+  }
+
+  function touch(name: string, value: string) {
+    setTouched(prev => new Set(prev).add(name));
+    const msg = fieldError(name, value);
+    setErrors(prev => ({ ...prev, [name]: msg }));
+  }
+
+  // VAT is optional — validate only if filled
+  function touchVat(value: string) {
+    const v = value.trim();
+    const msg = v && !RX.vat.test(v) ? MSGS.vat_invalid : '';
+    setTouched(prev => new Set(prev).add('vat'));
+    setErrors(prev => ({ ...prev, vat: msg }));
+  }
 
   function validate0() {
-    const e: Record<string, string> = {};
-    const req = t('required');
-    if (!firstName.trim()) e.firstName = req;
-    if (!lastName.trim())  e.lastName  = req;
-    if (!phone.trim())     e.phone     = req;
-    if (!email.trim())     e.email     = req;
+    const fields: [string, string][] = [
+      ['firstName', firstName], ['lastName', lastName],
+      ['phone', phone], ['email', email],
+    ];
     if (custType === 'company') {
-      if (!company.trim()) e.company = req;
-      if (!eik.trim())     e.eik     = req;
-      if (!mol.trim())     e.mol     = req;
+      fields.push(['company', company], ['eik', eik], ['mol', mol]);
+    }
+    const e: Record<string, string> = {};
+    fields.forEach(([n, v]) => {
+      const msg = fieldError(n, v);
+      if (msg) e[n] = msg;
+    });
+    if (custType === 'company' && vat.trim() && !RX.vat.test(vat.trim())) {
+      e.vat = MSGS.vat_invalid;
     }
     setErrors(e);
+    setTouched(new Set(fields.map(([n]) => n)));
     return Object.keys(e).length === 0;
   }
 
   function validate1() {
-    const e: Record<string, string> = {};
-    const req = t('required');
+    const fields: [string, string][] = [['city', city]];
     if (delivType === 'address') {
-      if (!city.trim())     e.city    = req;
-      if (!address.trim())  e.address = req;
-      if (!postcode.trim()) e.postcode = req;
-    } else {
-      if (!city.trim()) e.city = req;
+      fields.push(['address', address], ['postcode', postcode]);
     }
+    const e: Record<string, string> = {};
+    fields.forEach(([n, v]) => {
+      const msg = fieldError(n, v);
+      if (msg) e[n] = msg;
+    });
     setErrors(e);
+    setTouched(new Set(fields.map(([n]) => n)));
     return Object.keys(e).length === 0;
   }
 
@@ -80,6 +149,9 @@ export default function CheckoutPage() {
   }
 
   async function submit() {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const ss = typeof sessionStorage !== 'undefined' ? sessionStorage : null;
+
     try {
       await fetch('/api/orders', {
         method: 'POST',
@@ -96,6 +168,10 @@ export default function CheckoutPage() {
             id: i.id, name: i.name, slug: i.slug,
             price: i.price, quantity: i.quantity, image: i.image,
           })),
+          timezone:    tz ?? null,
+          utmSource:   ss?.getItem('utm_source')   ?? null,
+          utmMedium:   ss?.getItem('utm_medium')   ?? null,
+          utmCampaign: ss?.getItem('utm_campaign') ?? null,
         }),
       });
     } catch {}
@@ -167,12 +243,28 @@ export default function CheckoutPage() {
               <div className="co-row">
                 <div className="co-field">
                   <label className="co-label">{t('firstName')} <span>*</span></label>
-                  <input className={`co-input${errors.firstName ? ' error' : ''}`} value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Иван" />
+                  <input
+                    className={`co-input${errors.firstName ? ' error' : touched.has('firstName') && !errors.firstName ? ' valid' : ''}`}
+                    value={firstName}
+                    onChange={e => { setFirstName(e.target.value); if (touched.has('firstName')) touch('firstName', e.target.value); }}
+                    onBlur={e => touch('firstName', e.target.value)}
+                    placeholder="Иван"
+                    maxLength={50}
+                    autoComplete="given-name"
+                  />
                   {errors.firstName && <span className="co-err">{errors.firstName}</span>}
                 </div>
                 <div className="co-field">
                   <label className="co-label">{t('lastName')} <span>*</span></label>
-                  <input className={`co-input${errors.lastName ? ' error' : ''}`} value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Иванов" />
+                  <input
+                    className={`co-input${errors.lastName ? ' error' : touched.has('lastName') && !errors.lastName ? ' valid' : ''}`}
+                    value={lastName}
+                    onChange={e => { setLastName(e.target.value); if (touched.has('lastName')) touch('lastName', e.target.value); }}
+                    onBlur={e => touch('lastName', e.target.value)}
+                    placeholder="Иванов"
+                    maxLength={50}
+                    autoComplete="family-name"
+                  />
                   {errors.lastName && <span className="co-err">{errors.lastName}</span>}
                 </div>
               </div>
@@ -180,12 +272,30 @@ export default function CheckoutPage() {
               <div className="co-row">
                 <div className="co-field">
                   <label className="co-label">{t('phone')} <span>*</span></label>
-                  <input className={`co-input${errors.phone ? ' error' : ''}`} value={phone} onChange={e => setPhone(e.target.value)} placeholder="+359 88 888 8888" type="tel" />
+                  <input
+                    className={`co-input${errors.phone ? ' error' : touched.has('phone') && !errors.phone ? ' valid' : ''}`}
+                    value={phone}
+                    onChange={e => { setPhone(e.target.value); if (touched.has('phone')) touch('phone', e.target.value); }}
+                    onBlur={e => touch('phone', e.target.value)}
+                    placeholder="+359 88 888 8888"
+                    type="tel"
+                    maxLength={16}
+                    autoComplete="tel"
+                  />
                   {errors.phone && <span className="co-err">{errors.phone}</span>}
                 </div>
                 <div className="co-field">
                   <label className="co-label">{t('email')} <span>*</span></label>
-                  <input className={`co-input${errors.email ? ' error' : ''}`} value={email} onChange={e => setEmail(e.target.value)} placeholder="ivan@example.com" type="email" />
+                  <input
+                    className={`co-input${errors.email ? ' error' : touched.has('email') && !errors.email ? ' valid' : ''}`}
+                    value={email}
+                    onChange={e => { setEmail(e.target.value); if (touched.has('email')) touch('email', e.target.value); }}
+                    onBlur={e => touch('email', e.target.value)}
+                    placeholder="ivan@example.com"
+                    type="email"
+                    maxLength={100}
+                    autoComplete="email"
+                  />
                   {errors.email && <span className="co-err">{errors.email}</span>}
                 </div>
               </div>
@@ -199,23 +309,53 @@ export default function CheckoutPage() {
                 <div className="co-company-fields">
                   <div className="co-field">
                     <label className="co-label">{t('company')} <span>*</span></label>
-                    <input className={`co-input${errors.company ? ' error' : ''}`} value={company} onChange={e => setCompany(e.target.value)} placeholder="ООД / ЕООД / АД" />
+                    <input
+                      className={`co-input${errors.company ? ' error' : touched.has('company') && !errors.company ? ' valid' : ''}`}
+                      value={company}
+                      onChange={e => { setCompany(e.target.value); if (touched.has('company')) touch('company', e.target.value); }}
+                      onBlur={e => touch('company', e.target.value)}
+                      placeholder="ООД / ЕООД / АД"
+                      maxLength={100}
+                    />
                     {errors.company && <span className="co-err">{errors.company}</span>}
                   </div>
                   <div className="co-row">
                     <div className="co-field">
                       <label className="co-label">{t('eik')} <span>*</span></label>
-                      <input className={`co-input${errors.eik ? ' error' : ''}`} value={eik} onChange={e => setEik(e.target.value)} placeholder="123456789" />
+                      <input
+                        className={`co-input${errors.eik ? ' error' : touched.has('eik') && !errors.eik ? ' valid' : ''}`}
+                        value={eik}
+                        onChange={e => { const v = e.target.value.replace(/\D/g, ''); setEik(v); if (touched.has('eik')) touch('eik', v); }}
+                        onBlur={e => touch('eik', e.target.value)}
+                        placeholder="123456789"
+                        inputMode="numeric"
+                        maxLength={13}
+                      />
                       {errors.eik && <span className="co-err">{errors.eik}</span>}
                     </div>
                     <div className="co-field">
                       <label className="co-label">{t('vat')} <small>({t('vatOptional')})</small></label>
-                      <input className="co-input" value={vat} onChange={e => setVat(e.target.value)} placeholder="BG123456789" />
+                      <input
+                        className={`co-input${errors.vat ? ' error' : touched.has('vat') && vat.trim() && !errors.vat ? ' valid' : ''}`}
+                        value={vat}
+                        onChange={e => { setVat(e.target.value.toUpperCase()); if (touched.has('vat')) touchVat(e.target.value); }}
+                        onBlur={e => touchVat(e.target.value)}
+                        placeholder="BG123456789"
+                        maxLength={13}
+                      />
+                      {errors.vat && <span className="co-err">{errors.vat}</span>}
                     </div>
                   </div>
                   <div className="co-field">
                     <label className="co-label">{t('mol')} <span>*</span></label>
-                    <input className={`co-input${errors.mol ? ' error' : ''}`} value={mol} onChange={e => setMol(e.target.value)} placeholder="Три имена на представляващия" />
+                    <input
+                      className={`co-input${errors.mol ? ' error' : touched.has('mol') && !errors.mol ? ' valid' : ''}`}
+                      value={mol}
+                      onChange={e => { setMol(e.target.value); if (touched.has('mol')) touch('mol', e.target.value); }}
+                      onBlur={e => touch('mol', e.target.value)}
+                      placeholder="Три имена на представляващия"
+                      maxLength={100}
+                    />
                     {errors.mol && <span className="co-err">{errors.mol}</span>}
                   </div>
                 </div>
@@ -252,13 +392,30 @@ export default function CheckoutPage() {
               <div className="co-row">
                 <div className="co-field">
                   <label className="co-label">{t('city')} <span>*</span></label>
-                  <input className={`co-input${errors.city ? ' error' : ''}`} value={city} onChange={e => setCity(e.target.value)} placeholder="София" />
+                  <input
+                    className={`co-input${errors.city ? ' error' : touched.has('city') && !errors.city ? ' valid' : ''}`}
+                    value={city}
+                    onChange={e => { setCity(e.target.value); if (touched.has('city')) touch('city', e.target.value); }}
+                    onBlur={e => touch('city', e.target.value)}
+                    placeholder="София"
+                    maxLength={80}
+                    autoComplete="address-level2"
+                  />
                   {errors.city && <span className="co-err">{errors.city}</span>}
                 </div>
                 {delivType === 'address' && (
                   <div className="co-field">
                     <label className="co-label">{t('postcode')} <span>*</span></label>
-                    <input className={`co-input${errors.postcode ? ' error' : ''}`} value={postcode} onChange={e => setPostcode(e.target.value)} placeholder="1000" />
+                    <input
+                      className={`co-input${errors.postcode ? ' error' : touched.has('postcode') && !errors.postcode ? ' valid' : ''}`}
+                      value={postcode}
+                      onChange={e => { const v = e.target.value.replace(/\D/g, '').slice(0, 4); setPostcode(v); if (touched.has('postcode')) touch('postcode', v); }}
+                      onBlur={e => touch('postcode', e.target.value)}
+                      placeholder="1000"
+                      inputMode="numeric"
+                      maxLength={4}
+                      autoComplete="postal-code"
+                    />
                     {errors.postcode && <span className="co-err">{errors.postcode}</span>}
                   </div>
                 )}
@@ -267,7 +424,15 @@ export default function CheckoutPage() {
               {delivType === 'address' && (
                 <div className="co-field">
                   <label className="co-label">{t('address')} <span>*</span></label>
-                  <input className={`co-input${errors.address ? ' error' : ''}`} value={address} onChange={e => setAddress(e.target.value)} placeholder="ул. Примерна 1, ет. 2, ап. 3" />
+                  <input
+                    className={`co-input${errors.address ? ' error' : touched.has('address') && !errors.address ? ' valid' : ''}`}
+                    value={address}
+                    onChange={e => { setAddress(e.target.value); if (touched.has('address')) touch('address', e.target.value); }}
+                    onBlur={e => touch('address', e.target.value)}
+                    placeholder="ул. Примерна 1, ет. 2, ап. 3"
+                    maxLength={200}
+                    autoComplete="street-address"
+                  />
                   {errors.address && <span className="co-err">{errors.address}</span>}
                 </div>
               )}
@@ -355,7 +520,7 @@ export default function CheckoutPage() {
         </div>
 
         {/* ── ORDER SUMMARY ── */}
-        <div className="co-summary" style={{ display: 'none' }}>
+        <div className="co-summary">
           <div className="co-summary__title">{t('summaryTitle')}</div>
           {items.map((item) => (
             <div key={item.id} className="co-summary__item">

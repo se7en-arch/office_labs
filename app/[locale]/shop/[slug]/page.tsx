@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Link } from '@/i18n/navigation';
 import { getTranslations } from 'next-intl/server';
@@ -8,6 +9,45 @@ import ProductCard from '@/components/ProductCard';
 import ProductGallery from '@/components/ProductGallery';
 import ProductTabs from '@/components/ProductTabs';
 
+export const revalidate = 3600;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const product = await prisma.product.findUnique({
+    where: { slug },
+    include: { series: true, category: true },
+  });
+  if (!product || product.archived) return {};
+
+  const title = `${product.name} | .office labs`;
+  const description = product.description ?? `${product.name} — ${product.series.name} серия офис мебели`;
+  const imageUrl = product.image.startsWith('http')
+    ? product.image
+    : `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://officelabs.bg'}${product.image}`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: [{ url: imageUrl, width: 1200, height: 630, alt: product.name }],
+      type: 'website',
+      siteName: '.office labs',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [imageUrl],
+    },
+  };
+}
+
 export default async function ProductPage({ params }: { params: Promise<{ locale: string; slug: string }> }) {
   const { slug } = await params;
   const t = await getTranslations('product');
@@ -17,12 +57,13 @@ export default async function ProductPage({ params }: { params: Promise<{ locale
     include: { series: true, category: true },
   });
 
-  if (!product) notFound();
+  if (!product || product.archived) notFound();
 
   const related = await prisma.product.findMany({
     where: {
       seriesId: product.seriesId,
       id: { not: product.id },
+      archived: false,
     },
     take: 4,
     include: {
@@ -31,8 +72,36 @@ export default async function ProductPage({ params }: { params: Promise<{ locale
     },
   });
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://officelabs.bg';
+  const imageUrl = product.image.startsWith('http') ? product.image : `${siteUrl}${product.image}`;
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    description: product.description ?? undefined,
+    image: imageUrl,
+    sku: product.sku ?? undefined,
+    brand: { '@type': 'Brand', name: '.office labs' },
+    offers: {
+      '@type': 'Offer',
+      price: product.price,
+      priceCurrency: 'EUR',
+      availability:
+        product.stock > 0
+          ? 'https://schema.org/InStock'
+          : 'https://schema.org/OutOfStock',
+      url: `${siteUrl}/shop/${product.slug}`,
+    },
+  };
+
   return (
     <div className="page-wrap">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
       <nav className="breadcrumb">
         <Link href="/">{t('breadHome')}</Link>
         <span className="breadcrumb__sep">/</span>
@@ -47,7 +116,11 @@ export default async function ProductPage({ params }: { params: Promise<{ locale
         {/* Gallery */}
         <div className="product-gallery">
           <div className="product-gallery__main">
-            <ProductGallery image={product.image} productName={product.name} />
+            <ProductGallery
+            image={product.image}
+            images={(() => { try { return JSON.parse(product.images || '[]'); } catch { return []; } })()}
+            productName={product.name}
+          />
           </div>
         </div>
 
@@ -61,6 +134,7 @@ export default async function ProductPage({ params }: { params: Promise<{ locale
           <p className="product-info__desc">{product.description}</p>
 
           <AddToCartButton
+            stock={product.stock}
             product={{
               id: product.id,
               name: product.name,
@@ -91,8 +165,8 @@ export default async function ProductPage({ params }: { params: Promise<{ locale
             </div>
             <div className="spec-row">
               <span className="spec-label">{t('availability')}</span>
-              <span className="spec-value" style={{ color: product.stock > 0 ? '#16a34a' : '#ef4444' }}>
-                {product.stock > 0 ? t('stockCount', { count: product.stock }) : t('outOfStock')}
+              <span className="spec-value" style={{ color: product.stock === 0 ? '#ef4444' : product.stock <= 3 ? '#D97706' : '#16a34a' }}>
+                {product.stock === 0 ? t('outOfStock') : product.stock <= 3 ? t('limitedStock') : t('stockCount', { count: product.stock })}
               </span>
             </div>
           </div>
@@ -126,6 +200,7 @@ export default async function ProductPage({ params }: { params: Promise<{ locale
                 badge={p.badge}
                 seriesName={p.series.name}
                 categoryName={p.category.name}
+                stock={p.stock}
               />
             ))}
           </div>

@@ -8,6 +8,7 @@ import '../globals.css';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CartInitializer from '@/components/CartInitializer';
+import UTMCapture from '@/components/UTMCapture';
 
 const inter = Inter({
   subsets: ['latin', 'cyrillic'],
@@ -44,6 +45,7 @@ export default async function LocaleLayout({
       <body suppressHydrationWarning>
         <NextIntlClientProvider messages={messages}>
           <CartInitializer />
+          <UTMCapture />
           <Navbar />
           {children}
           <Footer />

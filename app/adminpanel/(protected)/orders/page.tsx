@@ -8,112 +8,204 @@ const STATUS_LABELS: Record<string, string> = {
   delivered: 'Доставена',
   cancelled: 'Отказана',
 };
-
-const STATUS_COLORS: Record<string, string> = {
-  pending: '#ca8a04',
-  processing: '#2563eb',
-  shipped: '#7c3aed',
-  delivered: '#16a34a',
-  cancelled: '#dc2626',
+const STATUS_PILL: Record<string, { bg: string; color: string }> = {
+  pending:    { bg: '#fef9c3', color: '#854d0e' },
+  processing: { bg: '#dbeafe', color: '#1e40af' },
+  shipped:    { bg: '#ede9fe', color: '#5b21b6' },
+  delivered:  { bg: '#dcfce7', color: '#166534' },
+  cancelled:  { bg: '#fee2e2', color: '#991b1b' },
 };
 
-export default async function OrdersPage() {
-  const [orders, counts] = await Promise.all([
+export default async function OrdersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string; page?: string }>;
+}) {
+  const { status: filterStatus, page: pageParam } = await searchParams;
+  const page = Math.max(1, parseInt(pageParam ?? '1'));
+  const perPage = 25;
+
+  const [orders, counts, totalRevenue] = await Promise.all([
     prisma.order.findMany({
+      where: filterStatus ? { status: filterStatus } : undefined,
       orderBy: { createdAt: 'desc' },
+      take: perPage,
+      skip: (page - 1) * perPage,
       include: { items: true },
-      take: 100,
     }),
     prisma.order.groupBy({ by: ['status'], _count: { _all: true } }),
+    prisma.order.aggregate({ _sum: { total: true } }),
   ]);
 
   const countMap: Record<string, number> = {};
   for (const c of counts) countMap[c.status] = c._count._all;
+  const totalAll = Object.values(countMap).reduce((s, n) => s + n, 0);
+
+  const totalOrderRevenue = totalRevenue._sum.total ?? 0;
+
+  const tabs = [
+    { key: '', label: 'Всички', count: totalAll },
+    { key: 'pending',    label: 'Нова',          count: countMap['pending']    ?? 0 },
+    { key: 'processing', label: 'В обработка',   count: countMap['processing'] ?? 0 },
+    { key: 'shipped',    label: 'Изпратена',     count: countMap['shipped']    ?? 0 },
+    { key: 'delivered',  label: 'Доставена',     count: countMap['delivered']  ?? 0 },
+    { key: 'cancelled',  label: 'Отказана',      count: countMap['cancelled']  ?? 0 },
+  ];
 
   return (
     <>
+      {/* Header */}
       <div className="admin-page-header">
         <div>
           <h1>Поръчки</h1>
-          <p>{orders.length} поръчки общо</p>
+          <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 3 }}>
+            {totalAll} поръчки · €{totalOrderRevenue.toFixed(2)} общ приход
+          </p>
         </div>
         <a href="/api/admin/orders/export" className="admin-action-btn admin-action-btn--secondary">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
           </svg>
           Изнеси CSV
         </a>
       </div>
 
-      {/* Status summary */}
-      <div className="admin-stats" style={{ marginBottom: 24 }}>
-        {Object.entries(STATUS_LABELS).map(([key, label]) => (
-          <div key={key} className="admin-stat-card">
-            <div className="admin-stat-card__value" style={{ color: STATUS_COLORS[key] }}>
-              {countMap[key] ?? 0}
-            </div>
-            <div className="admin-stat-card__label">{label}</div>
-          </div>
-        ))}
-      </div>
-
       <div className="admin-card">
-        <div className="admin-card__body">
-          {orders.length === 0 ? (
-            <div className="admin-empty">Все още няма поръчки</div>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Клиент</th>
-                    <th>Email</th>
-                    <th>Продукти</th>
-                    <th>Общо</th>
-                    <th>Статус</th>
-                    <th>Дата</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {orders.map((o) => (
+
+        {/* Status tabs */}
+        <div className="orders-tabs">
+          {tabs.map(tab => {
+            const isActive = (filterStatus ?? '') === tab.key;
+            const href = tab.key ? `/adminpanel/orders?status=${tab.key}` : '/adminpanel/orders';
+            return (
+              <Link
+                key={tab.key}
+                href={href}
+                className={`orders-tab${isActive ? ' orders-tab--active' : ''}`}
+              >
+                {tab.label}
+                <span className={`orders-tab__count${isActive ? ' orders-tab__count--active' : ''}`}>
+                  {tab.count}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Table */}
+        {orders.length === 0 ? (
+          <div className="admin-empty">Няма поръчки за избрания статус</div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Клиент</th>
+                  <th>Телефон</th>
+                  <th>Продукти</th>
+                  <th>Доставка</th>
+                  <th>Плащане</th>
+                  <th>Сума</th>
+                  <th>Дата</th>
+                  <th>Статус</th>
+                  <th style={{ width: 40 }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders.map((o) => {
+                  const pill = STATUS_PILL[o.status] ?? { bg: '#f3f4f6', color: '#374151' };
+                  return (
                     <tr key={o.id}>
-                      <td style={{ fontWeight: 700, color: 'var(--muted)', fontSize: 13 }}>
+                      <td style={{ fontWeight: 700, color: 'var(--muted)', fontSize: 12, whiteSpace: 'nowrap' }}>
                         #{String(o.id).padStart(4, '0')}
                       </td>
                       <td>
-                        <div style={{ fontWeight: 600 }}>{o.firstName} {o.lastName}</div>
-                        {o.company && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{o.company}</div>}
+                        <div style={{ fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap' }}>
+                          {o.firstName} {o.lastName}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--muted)' }}>{o.email}</div>
+                        {o.company && (
+                          <div style={{ fontSize: 11, color: 'var(--muted)' }}>{o.company}</div>
+                        )}
                       </td>
-                      <td style={{ fontSize: 13 }}>{o.email}</td>
+                      <td style={{ fontSize: 13, whiteSpace: 'nowrap' }}>{o.phone}</td>
                       <td style={{ fontSize: 13, color: 'var(--muted)' }}>
                         {o.items.length} бр.
                       </td>
-                      <td style={{ fontWeight: 700 }}>{o.total.toFixed(2)} €</td>
+                      <td style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap' }}>
+                        {o.carrier}
+                        <div style={{ fontSize: 11 }}>
+                          {o.delivType === 'address' ? 'До адрес' : 'До офис'}
+                        </div>
+                      </td>
+                      <td style={{ fontSize: 12, color: 'var(--muted)' }}>
+                        {o.payment === 'card' ? 'Карта' : 'Наложен платеж'}
+                      </td>
+                      <td style={{ fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap' }}>
+                        €{o.total.toFixed(2)}
+                      </td>
+                      <td style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap' }}>
+                        {new Date(o.createdAt).toLocaleDateString('bg-BG')}
+                        <div style={{ fontSize: 11 }}>
+                          {new Date(o.createdAt).toLocaleTimeString('bg-BG', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </td>
                       <td>
-                        <span className="admin-order-status" style={{ color: STATUS_COLORS[o.status] ?? '#999', background: `${STATUS_COLORS[o.status]}18` }}>
+                        <span className="admin-order-status-pill" style={{ background: pill.bg, color: pill.color }}>
                           {STATUS_LABELS[o.status] ?? o.status}
                         </span>
                       </td>
-                      <td style={{ fontSize: 12, color: 'var(--muted)' }}>
-                        {new Date(o.createdAt).toLocaleDateString('bg-BG')}
-                      </td>
                       <td>
-                        <Link href={`/adminpanel/orders/${o.id}`} className="admin-row-btn admin-row-btn--view" title="Детайли">
+                        <Link
+                          href={`/adminpanel/orders/${o.id}`}
+                          className="admin-row-btn admin-row-btn--view"
+                          title="Виж поръчката"
+                        >
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
                           </svg>
                         </Link>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalAll > perPage && (
+          <div className="orders-pagination">
+            {page > 1 && (
+              <Link
+                href={filterStatus
+                  ? `/adminpanel/orders?status=${filterStatus}&page=${page - 1}`
+                  : `/adminpanel/orders?page=${page - 1}`}
+                className="orders-pag-btn"
+              >
+                ← Предишна
+              </Link>
+            )}
+            <span className="orders-pag-info">
+              Страница {page} от {Math.ceil(totalAll / perPage)}
+            </span>
+            {page < Math.ceil(totalAll / perPage) && (
+              <Link
+                href={filterStatus
+                  ? `/adminpanel/orders?status=${filterStatus}&page=${page + 1}`
+                  : `/adminpanel/orders?page=${page + 1}`}
+                className="orders-pag-btn"
+              >
+                Следваща →
+              </Link>
+            )}
+          </div>
+        )}
+
       </div>
     </>
   );
