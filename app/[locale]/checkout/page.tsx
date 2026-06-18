@@ -79,7 +79,26 @@ export default function CheckoutPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  function submit() {
+  async function submit() {
+    try {
+      await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName, lastName, email, phone,
+          company: company || null, eik: eik || null, vat: vat || null, mol: mol || null,
+          carrier, delivType, city,
+          address: delivType === 'address' ? address : null,
+          postcode: delivType === 'address' ? postcode : null,
+          payment,
+          total: rawTotal,
+          items: items.map(i => ({
+            id: i.id, name: i.name, slug: i.slug,
+            price: i.price, quantity: i.quantity, image: i.image,
+          })),
+        }),
+      });
+    } catch {}
     clear();
     setDone(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
