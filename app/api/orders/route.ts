@@ -26,31 +26,56 @@ async function geoLookup(ip: string): Promise<GeoResult | null> {
   }
 }
 
+interface OrderBody {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  carrier: string;
+  delivType: string;
+  city: string;
+  payment: string;
+  total: number;
+  items: Array<{ id: number; name: string; slug: string; price: number; quantity: number; image: string }>;
+  company?: string;
+  eik?: string;
+  vat?: string;
+  mol?: string;
+  address?: string;
+  postcode?: string;
+  timezone?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+}
+
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
 }
 
 export async function POST(req: NextRequest) {
-  let body: Record<string, unknown>;
+  let raw: Record<string, unknown>;
   try {
-    body = await req.json();
+    raw = await req.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
   if (
-    typeof body.firstName !== 'string' || !body.firstName.trim() ||
-    typeof body.lastName  !== 'string' || !body.lastName.trim()  ||
-    typeof body.email     !== 'string' || !isValidEmail(body.email) ||
-    typeof body.phone     !== 'string' || !body.phone.trim() ||
-    typeof body.carrier   !== 'string' ||
-    typeof body.city      !== 'string' || !body.city.trim() ||
-    typeof body.payment   !== 'string' ||
-    typeof body.total     !== 'number' || body.total <= 0 ||
-    !Array.isArray(body.items)         || body.items.length === 0
+    typeof raw.firstName !== 'string' || !raw.firstName.trim() ||
+    typeof raw.lastName  !== 'string' || !raw.lastName.trim()  ||
+    typeof raw.email     !== 'string' || !isValidEmail(raw.email) ||
+    typeof raw.phone     !== 'string' || !raw.phone.trim() ||
+    typeof raw.carrier   !== 'string' ||
+    typeof raw.city      !== 'string' || !raw.city.trim() ||
+    typeof raw.payment   !== 'string' ||
+    typeof raw.total     !== 'number' || raw.total <= 0 ||
+    !Array.isArray(raw.items)         || raw.items.length === 0
   ) {
     return NextResponse.json({ error: 'Missing or invalid fields' }, { status: 400 });
   }
+
+  const body = raw as unknown as OrderBody;
 
   const ip        = req.headers.get('x-forwarded-for')?.split(',')[0].trim()
                  ?? req.headers.get('x-real-ip')
