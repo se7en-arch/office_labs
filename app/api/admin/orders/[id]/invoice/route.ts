@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { isAdminAuthenticated } from '@/lib/admin-auth';
 import { prisma } from '@/lib/prisma';
 
@@ -11,8 +10,7 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const cookieStore = await cookies();
-  if (!(await isAdminAuthenticated(cookieStore))) {
+  if (!(await isAdminAuthenticated())) {
     return NextResponse.redirect(new URL('/adminpanel', req.url));
   }
 
